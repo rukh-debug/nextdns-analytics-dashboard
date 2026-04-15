@@ -109,7 +109,7 @@ function TagChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+        "inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
         active
           ? "border-primary bg-primary/10 text-foreground"
           : "border-border text-muted-foreground hover:text-foreground"
@@ -253,6 +253,11 @@ export default function TagsPage() {
   const [tagForm, setTagForm] = useState({ name: "", color: "#ef4444" });
   const [listForm, setListForm] = useState({ name: "", tagId: "", sourceUrl: "" });
   const [grouped, setGrouped] = useState(false);
+  const [submittingTag, setSubmittingTag] = useState(false);
+  const [submittingList, setSubmittingList] = useState(false);
+  const [refreshingListId, setRefreshingListId] = useState<string | null>(null);
+  const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
+  const [deletingListId, setDeletingListId] = useState<string | null>(null);
 
   const systemTagIds = useMemo(
     () => new Set(lists.filter((list) => list.isSystem).map((list) => list.tag.id)),
@@ -335,6 +340,7 @@ export default function TagsPage() {
   };
 
   const submitTag = async () => {
+    setSubmittingTag(true);
     try {
       const response = await fetch(editingTag ? `/api/tags/${editingTag.id}` : "/api/tags", {
         method: editingTag ? "PATCH" : "POST",
@@ -355,10 +361,13 @@ export default function TagsPage() {
       toast.success(editingTag ? "Tag updated" : "Tag created");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save tag");
+    } finally {
+      setSubmittingTag(false);
     }
   };
 
   const deleteTag = async (tagId: string) => {
+    setDeletingTagId(tagId);
     try {
       const response = await fetch(`/api/tags/${tagId}`, { method: "DELETE" });
       const data = await response.json();
@@ -374,6 +383,8 @@ export default function TagsPage() {
       toast.success("Tag deleted");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete tag");
+    } finally {
+      setDeletingTagId(null);
     }
   };
 
@@ -394,6 +405,7 @@ export default function TagsPage() {
   };
 
   const submitList = async () => {
+    setSubmittingList(true);
     try {
       const response = await fetch(editingList ? `/api/domain-lists/${editingList.id}` : "/api/domain-lists", {
         method: editingList ? "PATCH" : "POST",
@@ -415,10 +427,13 @@ export default function TagsPage() {
       toast.success(editingList ? "Domain list updated" : "Domain list created");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save domain list");
+    } finally {
+      setSubmittingList(false);
     }
   };
 
   const refreshList = async (listId: string) => {
+    setRefreshingListId(listId);
     try {
       const response = await fetch(`/api/domain-lists/${listId}/refresh`, { method: "POST" });
       const data = await response.json();
@@ -431,10 +446,13 @@ export default function TagsPage() {
       toast.success("Domain list refreshed");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to refresh domain list");
+    } finally {
+      setRefreshingListId(null);
     }
   };
 
   const deleteList = async (listId: string) => {
+    setDeletingListId(listId);
     try {
       const response = await fetch(`/api/domain-lists/${listId}`, { method: "DELETE" });
       const data = await response.json();
@@ -447,6 +465,8 @@ export default function TagsPage() {
       toast.success("Domain list deleted");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete domain list");
+    } finally {
+      setDeletingListId(null);
     }
   };
 
@@ -514,7 +534,7 @@ export default function TagsPage() {
                         size="icon-sm"
                         onClick={() => openEditTagDialog(tag)}
                         aria-label={`Edit ${tag.name}`}
-                        disabled={isSystem}
+                        disabled={isSystem || deletingTagId === tag.id}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -523,9 +543,13 @@ export default function TagsPage() {
                         size="icon-sm"
                         onClick={() => deleteTag(tag.id)}
                         aria-label={`Delete ${tag.name}`}
-                        disabled={isSystem}
+                        disabled={isSystem || deletingTagId === tag.id}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        {deletingTagId === tag.id ? (
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-destructive border-t-transparent" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -587,15 +611,16 @@ export default function TagsPage() {
                         size="icon-sm"
                         onClick={() => refreshList(list.id)}
                         aria-label={`Refresh ${list.name}`}
+                        disabled={refreshingListId === list.id || deletingListId === list.id}
                       >
-                        <RefreshCw className="h-3.5 w-3.5" />
+                        <RefreshCw className={cn("h-3.5 w-3.5", refreshingListId === list.id && "animate-spin")} />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => openEditListDialog(list)}
                         aria-label={`Edit ${list.name}`}
-                        disabled={list.isSystem}
+                        disabled={list.isSystem || deletingListId === list.id || refreshingListId === list.id}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -604,9 +629,13 @@ export default function TagsPage() {
                         size="icon-sm"
                         onClick={() => deleteList(list.id)}
                         aria-label={`Delete ${list.name}`}
-                        disabled={list.isSystem}
+                        disabled={list.isSystem || deletingListId === list.id || refreshingListId === list.id}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        {deletingListId === list.id ? (
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-destructive border-t-transparent" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -654,7 +683,7 @@ export default function TagsPage() {
                   key={option.value}
                   onClick={() => setRange(option.value)}
                   className={cn(
-                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
                     range === option.value
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -793,11 +822,11 @@ export default function TagsPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setTagDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setTagDialogOpen(false)} disabled={submittingTag}>
               Cancel
             </Button>
-            <Button onClick={submitTag} disabled={!tagForm.name.trim()}>
-              Save Tag
+            <Button onClick={submitTag} disabled={submittingTag || !tagForm.name.trim()}>
+              {submittingTag ? "Saving..." : "Save Tag"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -849,14 +878,14 @@ export default function TagsPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setListDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setListDialogOpen(false)} disabled={submittingList}>
               Cancel
             </Button>
             <Button
               onClick={submitList}
-              disabled={!listForm.name.trim() || !listForm.tagId || !listForm.sourceUrl.trim()}
+              disabled={submittingList || !listForm.name.trim() || !listForm.tagId || !listForm.sourceUrl.trim()}
             >
-              Save List
+              {submittingList ? "Saving..." : "Save List"}
             </Button>
           </DialogFooter>
         </DialogContent>

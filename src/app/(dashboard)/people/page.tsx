@@ -205,6 +205,7 @@ export default function PeoplePage() {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(PALETTE[0]);
   const [creating, setCreating] = useState(false);
+  const [deletingPersonId, setDeletingPersonId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!activeProfileId) return;
@@ -246,9 +247,11 @@ export default function PeoplePage() {
   };
 
   const deletePerson = async (id: string) => {
+    setDeletingPersonId(id);
     await fetch(`/api/persons/${id}`, { method: "DELETE" });
     if (selectedPerson?.id === id) setSelectedPerson(null);
     await loadData();
+    setDeletingPersonId(null);
   };
 
   const assignDevice = async (deviceId: string, personId: string | null) => {
@@ -308,7 +311,7 @@ export default function PeoplePage() {
                     <button
                       key={c}
                       className={cn(
-                        "w-7 h-7 rounded-full transition-all ring-offset-2 ring-offset-background",
+                        "w-7 h-7 rounded-full transition-all ring-offset-2 ring-offset-background cursor-pointer",
                         newColor === c ? "ring-2 ring-ring scale-110" : "hover:scale-105"
                       )}
                       style={{ backgroundColor: c }}
@@ -364,7 +367,7 @@ export default function PeoplePage() {
                   >
                     <Card
                       className={cn(
-                        "p-4 cursor-pointer transition-all",
+                        "p-4 cursor-pointer transition-all group",
                         isSelected ? "ring-2 ring-primary" : "hover:shadow-md"
                       )}
                       onClick={() => setSelectedPerson(isSelected ? null : person)}
@@ -391,10 +394,11 @@ export default function PeoplePage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               onClick={(e) => { e.stopPropagation(); deletePerson(person.id); }}
+                              disabled={deletingPersonId === person.id}
                               className="text-destructive"
                             >
                               <Trash2 className="h-3.5 w-3.5 mr-2" />
-                              Delete person
+                              {deletingPersonId === person.id ? "Deleting..." : "Delete person"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

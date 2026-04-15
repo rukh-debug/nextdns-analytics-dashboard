@@ -79,7 +79,7 @@ function TagChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+        "inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
         active
           ? "border-primary bg-primary/10 text-foreground"
           : "border-border text-muted-foreground hover:text-foreground"
@@ -138,6 +138,7 @@ export default function WebhooksPage() {
   const [customCooldown, setCustomCooldown] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
     const [wRes, tRes] = await Promise.all([
@@ -199,6 +200,7 @@ export default function WebhooksPage() {
   };
 
   const createWebhook = async () => {
+    setSaving(true);
     try {
       const res = await fetch("/api/webhooks", {
         method: "POST",
@@ -219,11 +221,14 @@ export default function WebhooksPage() {
       toast.success("Webhook created");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create webhook");
+    } finally {
+      setSaving(false);
     }
   };
 
   const updateWebhook = async () => {
     if (!editingId) return;
+    setSaving(true);
     try {
       const res = await fetch(`/api/webhooks/${editingId}`, {
         method: "PATCH",
@@ -245,6 +250,8 @@ export default function WebhooksPage() {
       toast.success("Webhook updated");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update webhook");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -434,7 +441,7 @@ export default function WebhooksPage() {
                       onClick={() => toggleActive(webhook)}
                       disabled={isToggling}
                       className={cn(
-                        "mt-1 flex h-8 w-8 items-center justify-center rounded-lg shrink-0 transition-colors",
+                        "mt-1 flex h-8 w-8 items-center justify-center rounded-lg shrink-0 transition-colors cursor-pointer disabled:cursor-not-allowed",
                         isActive
                           ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
                           : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -558,12 +565,12 @@ export default function WebhooksPage() {
           </DialogHeader>
           {renderForm()}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={saving}>Cancel</Button>
             <Button
               onClick={createWebhook}
-              disabled={!form.name.trim() || !form.url.trim() || form.triggers.length === 0}
+              disabled={saving || !form.name.trim() || !form.url.trim() || form.triggers.length === 0}
             >
-              Create Webhook
+              {saving ? "Saving..." : "Create Webhook"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -580,12 +587,12 @@ export default function WebhooksPage() {
           </DialogHeader>
           {renderForm()}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>Cancel</Button>
             <Button
               onClick={updateWebhook}
-              disabled={!form.name.trim() || !form.url.trim() || form.triggers.length === 0}
+              disabled={saving || !form.name.trim() || !form.url.trim() || form.triggers.length === 0}
             >
-              Save Changes
+              {saving ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

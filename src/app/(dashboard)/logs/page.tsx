@@ -1032,7 +1032,7 @@ function LogsContent() {
                   key={filter.label}
                   type="button"
                   onClick={filter.onRemove}
-                  className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors cursor-pointer hover:bg-accent hover:text-foreground"
                 >
                   {filter.label}
                   <X className="h-3 w-3" />

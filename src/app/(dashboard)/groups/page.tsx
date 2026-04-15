@@ -264,7 +264,7 @@ function GroupAnalyticsSection({
               type="button"
               onClick={() => onRangeChange(option.value)}
               className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer",
                 range === option.value
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -415,6 +415,7 @@ export default function GroupsPage() {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(PALETTE[0]);
   const [creating, setCreating] = useState(false);
+  const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [analyticsRange, setAnalyticsRange] = useState("24h");
 
@@ -492,11 +493,13 @@ export default function GroupsPage() {
   };
 
   const deleteGroup = async (id: string) => {
+    setDeletingGroupId(id);
     await fetch(`/api/groups/${id}`, { method: "DELETE" });
     if (selectedGroupId === id) {
       setSelectedGroup(null);
     }
     await loadData();
+    setDeletingGroupId(null);
   };
 
   const assignDevice = async (deviceId: string, groupId: string | null) => {
@@ -552,8 +555,8 @@ export default function GroupsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => void loadData()}>
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+          <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
+            <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
             Refresh
           </Button>
 
@@ -583,7 +586,7 @@ export default function GroupsPage() {
                         key={color}
                         type="button"
                         className={cn(
-                          "h-7 w-7 rounded-full ring-offset-2 ring-offset-background transition-all",
+                          "h-7 w-7 rounded-full ring-offset-2 ring-offset-background transition-all cursor-pointer",
                           newColor === color ? "scale-110 ring-2 ring-ring" : "hover:scale-105"
                         )}
                         style={{ backgroundColor: color }}
@@ -679,10 +682,11 @@ export default function GroupsPage() {
                                 event.stopPropagation();
                                 void deleteGroup(group.id);
                               }}
+                              disabled={deletingGroupId === group.id}
                               className="text-destructive"
                             >
                               <Trash2 className="mr-2 h-3.5 w-3.5" />
-                              Delete group
+                              {deletingGroupId === group.id ? "Deleting..." : "Delete group"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
