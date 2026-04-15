@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1776099648251,
+      "tag": "0000_noisy_leper_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776233700000,
+      "tag": "0001_rename_persons_to_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776320000000,
+      "tag": "0002_add_webhook_cooldown",
+      "breakpoints": true
+    }
+  ]
+}
