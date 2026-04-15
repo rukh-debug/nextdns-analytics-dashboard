@@ -27,7 +27,7 @@ export function Topbar() {
       <button
         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         aria-label="Toggle theme"
-        className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors relative"
+        className="rounded-lg p-2 cursor-pointer text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors relative"
       >
         <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
         <Moon className="absolute top-2 left-2 h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

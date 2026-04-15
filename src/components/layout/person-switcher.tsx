@@ -33,7 +33,7 @@ export function PersonSwitcher() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium hover:bg-accent transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium cursor-pointer hover:bg-accent transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring">
         {selected ? (
           <>
             <GroupAvatar group={selected} />

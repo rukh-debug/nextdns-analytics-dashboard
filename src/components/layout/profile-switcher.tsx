@@ -55,7 +55,7 @@ export function ProfileSwitcher() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors">
+      <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-accent transition-colors">
         <Wifi className="h-4 w-4 text-primary" />
         <span className="max-w-[200px] truncate">
           {activeProfile?.name || "Select Profile"}

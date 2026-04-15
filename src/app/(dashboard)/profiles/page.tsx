@@ -29,6 +29,7 @@ export default function ProfilesPage() {
   const [discovering, setDiscovering] = useState(false);
   const [discoverFeedback, setDiscoverFeedback] = useState<string | null>(null);
   const [profileToDelete, setProfileToDelete] = useState<Profile | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const profileCountLabel = useMemo(() => {
     if (profiles.length === 1) return "1 profile connected";
@@ -76,6 +77,7 @@ export default function ProfilesPage() {
 
   const confirmDeleteProfile = async () => {
     if (!profileToDelete) return;
+    setDeleting(true);
     try {
       const res = await fetch(`/api/profiles/${profileToDelete.id}`, { method: "DELETE" });
       const data = await res.json();
@@ -85,6 +87,8 @@ export default function ProfilesPage() {
       toast.success(`Deleted ${profileToDelete.name} and its stored data`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete profile");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -177,8 +181,10 @@ export default function ProfilesPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setProfileToDelete(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDeleteProfile}>Delete Profile</Button>
+            <Button variant="outline" onClick={() => setProfileToDelete(null)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteProfile} disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete Profile"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
