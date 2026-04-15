@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+data/
+openspec/
+.opencode/
+.env
+*.db
+*.db-journal
+CLAUDE.md
+CLAUDE.md.original.md
+AGENTS.md
+README.md
+.github
+docker-compose.yml
