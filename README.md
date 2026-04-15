@@ -10,61 +10,37 @@ Self-hosted DNS monitoring for [NextDNS](https://nextdns.io) — real-time query
 
 ## Docker (recommended)
 
-You need a PostgreSQL database. This example uses the official image alongside the app:
+`docker-compose.yml` includes the app and Postgres — just add your `.env` and go:
 
 ```bash
-git clone https://github.com/YOUR_REPO/nextdns-analytics-dashboard.git
+git clone https://github.com/rukh-debug/nextdns-analytics-dashboard.git
 cd nextdns-analytics-dashboard
 cp .env.example .env
 ```
 
-Edit `.env`:
+Edit `.env` — generate secrets and set your API key:
 
 ```bash
 NEXTDNS_API_KEY=your_api_key_here
 ENCRYPTION_KEY=$(openssl rand -hex 32)
-DATABASE_URL=postgres://ndns:secret@db:5432/ndns_analytic
-```
-
-Create a `docker-compose.override.yml` to add Postgres:
-
-```yaml
-services:
-  db:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: ndns
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: ndns_analytic
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-volumes:
-  pgdata:
+DB_PASSWORD=$(openssl rand -hex 16)
+DATABASE_URL=postgres://ndns:${DB_PASSWORD}@db:5432/ndns_analytic
 ```
 
 Then:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 Migrations run automatically on startup. Open [http://localhost:3000](http://localhost:3000), go to **Settings** → **Discover Profiles** to link your NextDNS account.
-
-### Using the pre-built image
-
-```bash
-docker pull ghcr.io/rukh-debug/nextdns-analytics-dashboard:latest
-```
 
 ## Local Development
 
 **Requirements**: [Bun](https://bun.sh) >= 1.0, PostgreSQL 15+
 
 ```bash
-git clone https://github.com/YOUR_REPO/nextdns-analytics-dashboard.git
+git clone https://github.com/rukh-debug/nextdns-analytics-dashboard.git
 cd nextdns-analytics-dashboard
 bun install
 cp .env.example .env
