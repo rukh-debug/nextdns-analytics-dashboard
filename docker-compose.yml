@@ -33,6 +33,7 @@ services:
       timeout: 5s
       retries: 5
     # No ports exposed to host — only accessible to app container
+    # AUTH_USER, AUTH_PASSWORD, SESSION_SECRET are loaded from .env via the app service
 
 volumes:
   pgdata:
