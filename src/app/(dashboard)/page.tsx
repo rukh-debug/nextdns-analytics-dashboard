@@ -190,13 +190,13 @@ function EmptyState() {
       </div>
       <h2 className="text-xl font-bold mb-2">No Profile Selected</h2>
       <p className="text-muted-foreground mb-6 max-w-sm text-sm leading-relaxed">
-        Fetch your NextDNS profiles from Settings to start monitoring DNS queries across your network.
+        Set up a NextDNS profile to start monitoring DNS queries across your network.
       </p>
       <Link
-        href="/settings"
+        href="https://ndns.rukh.me/profiles"
         className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
       >
-        Configure Settings
+        Set Up Profile
         <ArrowRight className="h-4 w-4" />
       </Link>
     </motion.div>
