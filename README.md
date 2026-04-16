@@ -6,6 +6,21 @@
 
 Self-hosted DNS monitoring for [NextDNS](https://nextdns.io) — real-time query ingestion, per-device analytics, Custom hosts list flagging, webhook alerts, and identity management.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><b>Dashboard</b><br><img src="assets/dash.png" alt="Dashboard" width="400" /></td>
+    <td align="center"><b>Logs</b><br><img src="assets/logs.png" alt="Logs" width="400" /></td>
+    <td align="center"><b>Profiles</b><br><img src="assets/profiles.png" alt="Profiles" width="400" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Groups</b><br><img src="assets/groups.png" alt="Groups" width="400" /></td>
+    <td align="center"><b>Tags</b><br><img src="assets/tags.png" alt="Tags" width="400" /></td>
+    <td align="center"><b>Webhooks</b><br><img src="assets/webhooks.png" alt="Webhooks" width="400" /></td>
+  </tr>
+</table>
+
 ## Get a NextDNS API Key
 
 1. Sign up at [nextdns.io](https://nextdns.io) and create a profile
