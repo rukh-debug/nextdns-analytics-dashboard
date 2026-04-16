@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="public/logo.png" alt="NDNS Analytics" width="120" height="120" />
+</div>
+
 # NextDNS Analytics Dashboard
 
 Self-hosted DNS monitoring for [NextDNS](https://nextdns.io) — real-time query ingestion, per-device analytics, Custom hosts list flagging, webhook alerts, and identity management.

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,7 +10,6 @@ import {
   Tags,
   PanelLeftClose,
   PanelLeft,
-  Radio,
   Webhook,
   UserCog,
 } from "lucide-react";
@@ -42,9 +42,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* Brand */}
       <div className={cn("flex items-center h-14 border-b shrink-0", collapsed ? "px-3 justify-center" : "px-4 gap-2.5")}>
-        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary shrink-0">
-          <Radio className="h-4 w-4 text-primary-foreground" />
-        </div>
+        <Image
+          src="/favicon.png"
+          alt="NDNS"
+          width={28}
+          height={28}
+          className="shrink-0 rounded-md"
+        />
         {!collapsed && (
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-bold tracking-tight">NDNS</span>
