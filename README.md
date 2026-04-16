@@ -29,6 +29,11 @@ NEXTDNS_API_KEY=your_api_key_here
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 DB_PASSWORD=$(openssl rand -hex 16)
 DATABASE_URL=postgres://ndns:${DB_PASSWORD}@db:5432/ndns_analytic
+
+# Optional — enable authentication
+AUTH_USER=admin
+AUTH_PASSWORD=changeme
+SESSION_SECRET=$(openssl rand -hex 32)
 ```
 
 Then:
@@ -55,6 +60,11 @@ Edit `.env` — set `NEXTDNS_API_KEY`, `ENCRYPTION_KEY`, and `DATABASE_URL` poin
 ```bash
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 DATABASE_URL=postgres://ndns:secret@localhost:5432/ndns_analytic
+
+# Optional — enable authentication
+AUTH_USER=admin
+AUTH_PASSWORD=changeme
+SESSION_SECRET=$(openssl rand -hex 32)
 ```
 
 ```bash
@@ -69,6 +79,9 @@ Open [http://localhost:3000](http://localhost:3000). Ingestion starts automatica
 
 | Variable | Default | Description |
 |---|---|---|
+| `AUTH_USER` | — | Username for login (optional — leave unset to disable auth) |
+| `AUTH_PASSWORD` | — | Password for login (optional — leave unset to disable auth) |
+| `SESSION_SECRET` | — | 64-char hex key for signing session cookies (`openssl rand -hex 32`) |
 | `NEXTDNS_API_KEY` | — | NextDNS API key (for profile discovery) |
 | `ENCRYPTION_KEY` | — | 64-char hex key (`openssl rand -hex 32`) |
 | `DATABASE_URL` | — | PostgreSQL connection string |
@@ -80,6 +93,18 @@ Open [http://localhost:3000](http://localhost:3000). Ingestion starts automatica
 | `VOLUME_SPIKE_THRESHOLD` | `200` | Queries per 5-min window to trigger alert |
 | `LOG_LEVEL` | `info` | `trace` `debug` `info` `warn` `error` `fatal` |
 | `LOG_MODE` | `pretty` | `pretty` (colored) or `json` (structured; auto in prod) |
+
+## Authentication
+
+Authentication is **optional and disabled by default**. To enable it, set all three auth variables in your `.env`:
+
+- `AUTH_USER` — login username
+- `AUTH_PASSWORD` — login password
+- `SESSION_SECRET` — cookie signing key (`openssl rand -hex 32`)
+
+When enabled, visitors are redirected to a `/login` page. Sessions are signed JWT cookies — no server-side session store needed. Sign out from the sidebar.
+
+If any of the three variables is unset, the dashboard is publicly accessible — suitable for local/trusted networks.
 
 ## Tech Stack
 
