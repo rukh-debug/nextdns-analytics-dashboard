@@ -34,7 +34,7 @@ export class IngestionManager {
 
     const db = getDb();
     const allProfiles = await db.select().from(profiles);
-    const pollInterval = parseInt(process.env.POLL_INTERVAL_SECONDS || "30") * 1000;
+    const pollInterval = parseInt(process.env.POLL_INTERVAL_SECONDS || "300") * 1000;
 
     log.info({ profileCount: allProfiles.length }, "Found profiles");
 
@@ -69,7 +69,7 @@ export class IngestionManager {
       return;
     }
 
-    const pollInterval = parseInt(process.env.POLL_INTERVAL_SECONDS || "30") * 1000;
+    const pollInterval = parseInt(process.env.POLL_INTERVAL_SECONDS || "300") * 1000;
     await this.startProfile(profileId, pollInterval);
   }
 
