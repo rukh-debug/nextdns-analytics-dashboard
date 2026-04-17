@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { getDb } from "@/lib/db";
 import { devices, dnsLogs, groups, profiles } from "@/lib/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { NextDNSBlockReason, NextDNSLog } from "@/types/nextdns";
 import { fireWebhooks } from "@/lib/webhooks/trigger";
 import { getNumericSetting } from "@/lib/settings";
@@ -195,17 +195,40 @@ async function processLogBatchUnsafe(
     return { attempted: logs.length, inserted: 0 };
   }
 
-  const freshDeviceIds = [
-    ...new Set(freshLogs.map((entry) => entry.log.device?.id).filter(Boolean)),
-  ] as string[];
-  const existingDevices = freshDeviceIds.length > 0
-    ? await db
-        .select()
-        .from(devices)
-        .where(inArray(devices.id, freshDeviceIds as [string, ...string[]]))
+  // Collect unique devices from fresh logs, tracking latest timestamp per device
+  const deviceUpdates = new Map<string, {
+    id: string;
+    name: string;
+    model: string | null;
+    localIp: string | null;
+    lastSeenAt: string;
+  }>();
+
+  for (const { log } of freshLogs) {
+    if (!log.device?.id) continue;
+
+    const existing = deviceUpdates.get(log.device.id);
+    const timestamp = existing
+      ? maxTimestamp(existing.lastSeenAt, log.timestamp)
+      : log.timestamp;
+
+    deviceUpdates.set(log.device.id, {
+      id: log.device.id,
+      name: log.device.name,
+      model: log.device.model || existing?.model || null,
+      localIp: log.device.localIp || existing?.localIp || null,
+      lastSeenAt: timestamp,
+    });
+  }
+
+  // Fetch existing devices to distinguish new vs updated
+  const deviceIds = [...deviceUpdates.keys()] as [string, ...string[]];
+  const existingDevices = deviceIds.length > 0
+    ? await db.select().from(devices).where(inArray(devices.id, deviceIds))
     : [];
-  const existingDeviceMap = new Map(existingDevices.map((device) => [device.id, device]));
-  const devicePersonMap = new Map(existingDevices.map((device) => [device.id, device.groupId]));
+  const existingDeviceMap = new Map(existingDevices.map((d) => [d.id, d]));
+  const devicePersonMap = new Map(existingDevices.map((d) => [d.id, d.groupId]));
+
   const newDevices: Array<{
     id: string;
     name: string;
@@ -213,61 +236,53 @@ async function processLogBatchUnsafe(
     localIp?: string | null;
   }> = [];
 
-  for (const { log } of freshLogs) {
-    if (!log.device?.id) {
-      continue;
-    }
-
-    const existing = existingDeviceMap.get(log.device.id);
-    if (existing) {
-      await db.update(devices)
-        .set({
-          name: log.device.name,
-          model: log.device.model || existing.model,
-          localIp: log.device.localIp || existing.localIp,
-          lastSeenAt: maxTimestamp(existing.lastSeenAt, log.timestamp),
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(devices.id, log.device.id));
-      existingDeviceMap.set(log.device.id, {
-        ...existing,
-        name: log.device.name,
-        model: log.device.model || existing.model,
-        localIp: log.device.localIp || existing.localIp,
-        lastSeenAt: maxTimestamp(existing.lastSeenAt, log.timestamp),
-      });
-      continue;
-    }
-
-    await db.insert(devices)
-      .values({
-        id: log.device.id,
-        profileId,
-        name: log.device.name,
-        model: log.device.model,
-        localIp: log.device.localIp,
-        lastSeenAt: log.timestamp,
-      });
-    const deviceRecord = {
-      id: log.device.id,
+  // Batch upsert all devices in one query
+  if (deviceUpdates.size > 0) {
+    const allDeviceValues = [...deviceUpdates.values()].map((d) => ({
+      id: d.id,
       profileId,
-      name: log.device.name,
-      model: log.device.model ?? null,
-      localIp: log.device.localIp ?? null,
-      groupId: null,
-      personId: null,
-      lastSeenAt: log.timestamp,
-      createdAt: null,
-      updatedAt: null,
-    };
-    existingDeviceMap.set(log.device.id, deviceRecord);
-    newDevices.push({
-      id: log.device.id,
-      name: log.device.name,
-      model: log.device.model,
-      localIp: log.device.localIp,
-    });
-    devicePersonMap.set(log.device.id, null);
+      name: d.name,
+      model: d.model,
+      localIp: d.localIp,
+      lastSeenAt: d.lastSeenAt,
+    }));
+
+    // Use ON CONFLICT to batch insert new + update existing in one query
+    await db.insert(devices)
+      .values(allDeviceValues)
+      .onConflictDoUpdate({
+        target: devices.id,
+        set: {
+          name: sql`EXCLUDED.name`,
+          model: sql`COALESCE(NULLIF(EXCLUDED.model, ''), devices.model)`,
+          localIp: sql`COALESCE(NULLIF(EXCLUDED.local_ip, ''), devices.local_ip)`,
+          lastSeenAt: sql`GREATEST(devices.last_seen_at, EXCLUDED.last_seen_at)`,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+
+    // Identify new devices (not in existing map) for webhooks
+    for (const [deviceId, update] of deviceUpdates) {
+      if (!existingDeviceMap.has(deviceId)) {
+        newDevices.push({
+          id: deviceId,
+          name: update.name,
+          model: update.model,
+          localIp: update.localIp,
+        });
+        devicePersonMap.set(deviceId, null);
+      } else {
+        // Update local map with latest data for volume spike webhooks
+        const existing = existingDeviceMap.get(deviceId)!;
+        existingDeviceMap.set(deviceId, {
+          ...existing,
+          name: update.name,
+          model: update.model || existing.model,
+          localIp: update.localIp || existing.localIp,
+          lastSeenAt: update.lastSeenAt,
+        });
+      }
+    }
   }
 
   // Batch-resolve group names for webhook enrichment
