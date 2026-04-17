@@ -26,6 +26,8 @@ COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/src/lib/db ./src/lib/db
 COPY --from=builder /app/src/instrumentation.ts ./src/instrumentation.ts
 
+RUN mkdir -p .next/cache && chown -R nextjs:nodejs .next
+
 USER nextjs
 
 EXPOSE 3000
