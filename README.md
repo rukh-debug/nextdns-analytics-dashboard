@@ -37,18 +37,25 @@ cd nextdns-analytics-dashboard
 cp .env.example .env
 ```
 
-Edit `.env` — generate secrets and set your API key:
+Edit `.env` — generate secrets first, then set your values:
+
+```bash
+# Generate secrets (run these in your terminal, then paste the output into .env)
+openssl rand -hex 32   # for ENCRYPTION_KEY
+openssl rand -hex 16   # for DB_PASSWORD
+openssl rand -hex 32   # for SESSION_SECRET (only if using auth)
+```
 
 ```bash
 NEXTDNS_API_KEY=your_api_key_here
-ENCRYPTION_KEY=$(openssl rand -hex 32)
-DB_PASSWORD=$(openssl rand -hex 16)
-DATABASE_URL=postgres://ndns:${DB_PASSWORD}@db:5432/ndns_analytic
+ENCRYPTION_KEY=<paste output of: openssl rand -hex 32>
+DB_PASSWORD=<paste output of: openssl rand -hex 16>
+DATABASE_URL=postgres://ndns:<DB_PASSWORD>@db:5432/ndns_analytic
 
 # Optional — enable authentication
 AUTH_USER=admin
 AUTH_PASSWORD=changeme
-SESSION_SECRET=$(openssl rand -hex 32)
+SESSION_SECRET=<paste output of: openssl rand -hex 32>
 ```
 
 Then:
@@ -73,13 +80,19 @@ cp .env.example .env
 Edit `.env` — set `NEXTDNS_API_KEY`, `ENCRYPTION_KEY`, and `DATABASE_URL` pointing to your local Postgres:
 
 ```bash
-ENCRYPTION_KEY=$(openssl rand -hex 32)
+# Generate secrets (run these in your terminal, then paste the output into .env)
+openssl rand -hex 32   # for ENCRYPTION_KEY
+openssl rand -hex 32   # for SESSION_SECRET (only if using auth)
+```
+
+```bash
+ENCRYPTION_KEY=<paste output of: openssl rand -hex 32>
 DATABASE_URL=postgres://ndns:secret@localhost:5432/ndns_analytic
 
 # Optional — enable authentication
 AUTH_USER=admin
 AUTH_PASSWORD=changeme
-SESSION_SECRET=$(openssl rand -hex 32)
+SESSION_SECRET=<paste output of: openssl rand -hex 32>
 ```
 
 ```bash
@@ -96,9 +109,9 @@ Open [http://localhost:3000](http://localhost:3000). Ingestion starts automatica
 |---|---|---|
 | `AUTH_USER` | — | Username for login (optional — leave unset to disable auth) |
 | `AUTH_PASSWORD` | — | Password for login (optional — leave unset to disable auth) |
-| `SESSION_SECRET` | — | 64-char hex key for signing session cookies (`openssl rand -hex 32`) |
+| `SESSION_SECRET` | — | 64-char hex key for signing session cookies (generate with `openssl rand -hex 32`) |
 | `NEXTDNS_API_KEY` | — | NextDNS API key (for profile discovery) |
-| `ENCRYPTION_KEY` | — | 64-char hex key (`openssl rand -hex 32`) |
+| `ENCRYPTION_KEY` | — | 64-char hex key (generate with `openssl rand -hex 32`) |
 | `DATABASE_URL` | — | PostgreSQL connection string |
 | `PORT` | `3000` | Server port |
 | `POLL_INTERVAL_SECONDS` | `30` | DNS log polling interval |
@@ -115,7 +128,7 @@ Authentication is **optional and disabled by default**. To enable it, set all th
 
 - `AUTH_USER` — login username
 - `AUTH_PASSWORD` — login password
-- `SESSION_SECRET` — cookie signing key (`openssl rand -hex 32`)
+- `SESSION_SECRET` — cookie signing key (generate with `openssl rand -hex 32`)
 
 When enabled, visitors are redirected to a `/login` page. Sessions are signed JWT cookies — no server-side session store needed. Sign out from the sidebar.
 
