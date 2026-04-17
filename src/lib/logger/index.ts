@@ -22,9 +22,24 @@ const validModes: LogMode[] = ["pretty", "json"];
 const level = validLevels.includes(LOG_LEVEL) ? LOG_LEVEL : "info";
 const mode = validModes.includes(LOG_MODE) ? LOG_MODE : defaultMode;
 
+// In production/standalone builds, pino-pretty may not be available.
+// Only configure the pretty transport when actually needed and available.
+const wantPretty =
+  mode === "pretty" && process.env.NODE_ENV !== "production";
+
+let pinoPrettyAvailable = false;
+if (wantPretty) {
+  try {
+    require.resolve("pino-pretty");
+    pinoPrettyAvailable = true;
+  } catch {
+    pinoPrettyAvailable = false;
+  }
+}
+
 const root = pino({
   level,
-  ...(mode === "pretty"
+  ...(pinoPrettyAvailable
     ? {
         transport: {
           target: "pino-pretty",
