@@ -11,6 +11,7 @@ import {
   summarizeTagMatches,
 } from "@/lib/alerts/tagging";
 import { createLogger } from "@/lib/logger";
+import { getDedupCache } from "./dedup-cache";
 
 const log = createLogger("log-processor");
 
@@ -47,31 +48,26 @@ function normalizeReasons(reasons: NextDNSBlockReason[] | undefined) {
 }
 
 function buildEventHash(profileId: string, log: NextDNSLog) {
-  const payload = JSON.stringify({
+  // Fast field concatenation instead of JSON.stringify of the full object
+  const reasons = normalizeReasons(log.reasons);
+  const parts = [
     profileId,
-    timestamp: log.timestamp,
-    domain: log.domain,
-    root: log.root ?? null,
-    tracker: log.tracker ?? null,
-    type: log.type ?? null,
-    dnssec: log.dnssec ?? null,
-    encrypted: log.encrypted,
-    protocol: log.protocol,
-    clientIp: log.clientIp,
-    client: log.client ?? null,
-    device: log.device
-      ? {
-          id: log.device.id,
-          name: log.device.name,
-          model: log.device.model ?? null,
-          localIp: log.device.localIp ?? null,
-        }
-      : null,
-    status: log.status,
-    reasons: normalizeReasons(log.reasons),
-  });
+    log.timestamp,
+    log.domain,
+    log.root ?? "",
+    log.tracker ?? "",
+    log.type ?? "",
+    log.dnssec ?? "",
+    String(log.encrypted),
+    log.protocol,
+    log.clientIp,
+    log.client ?? "",
+    log.device ? `${log.device.id}|${log.device.name}|${log.device.model ?? ""}|${log.device.localIp ?? ""}` : "",
+    log.status,
+    reasons.map((r) => `${r.id}:${r.name}`).join(","),
+  ];
 
-  return createHash("sha256").update(payload).digest("hex");
+  return createHash("sha256").update(parts.join("|")).digest("hex");
 }
 
 function chunk<T>(items: T[], size: number) {
@@ -165,7 +161,17 @@ async function processLogBatchUnsafe(
   const existingHashes = new Set<string>();
   const hashes = preparedLogs.map((entry) => entry.row.eventHash);
 
-  for (const hashBatch of chunk(hashes, HASH_QUERY_BATCH_SIZE)) {
+  // Check in-memory dedup cache first — skip DB for known hashes
+  const dedupCache = getDedupCache();
+  const cacheMisses = dedupCache.filterMisses(profileId, hashes);
+
+  // All hashes found in memory cache — nothing to do
+  if (cacheMisses.length === 0) {
+    return { attempted: logs.length, inserted: 0 };
+  }
+
+  // Only query DB for hashes not found in memory cache
+  for (const hashBatch of chunk(cacheMisses, HASH_QUERY_BATCH_SIZE)) {
     const rows = await db
       .select({ eventHash: dnsLogs.eventHash })
       .from(dnsLogs)
@@ -180,6 +186,9 @@ async function processLogBatchUnsafe(
       existingHashes.add(row.eventHash);
     }
   }
+
+  // Add cache-miss hashes to the memory cache (they've now been checked against DB)
+  dedupCache.addHashes(profileId, cacheMisses);
 
   const freshLogs = preparedLogs.filter((entry) => !existingHashes.has(entry.row.eventHash));
   if (freshLogs.length === 0) {
