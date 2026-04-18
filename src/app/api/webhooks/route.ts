@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { tags, webhookTags, webhooks } from "@/lib/db/schema";
+import { tags, webhookDevices, webhookTags, webhooks } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-const webhookTriggerSchema = z.enum(["flagged", "new_device", "volume_spike"]);
+const webhookTriggerSchema = z.enum(["flagged", "new_device", "volume_spike", "device_online", "device_offline"]);
 
 const webhookSchema = z.object({
   name: z.string().trim().min(1),
@@ -16,6 +16,8 @@ const webhookSchema = z.object({
   isActive: z.boolean().optional(),
   cooldownMinutes: z.number().int().min(0).max(1440).optional(),
   tagIds: z.array(z.string().trim().min(1)).optional().default([]),
+  deviceIds: z.array(z.string().trim().min(1)).optional().default([]),
+  deviceGapSeconds: z.number().int().min(60).max(86400).optional(),
 });
 
 export async function GET(request: Request) {
@@ -63,18 +65,32 @@ export async function GET(request: Request) {
     tagMap.set(row.webhookId, existing);
   }
 
+  const deviceRows = webhookIds.length > 0
+    ? await db
+        .select({ webhookId: webhookDevices.webhookId, deviceId: webhookDevices.deviceId })
+        .from(webhookDevices)
+        .where(inArray(webhookDevices.webhookId, webhookIds as [string, ...string[]]))
+    : [];
+  const deviceMap = new Map<string, string[]>();
+  for (const row of deviceRows) {
+    const existing = deviceMap.get(row.webhookId) ?? [];
+    existing.push(row.deviceId);
+    deviceMap.set(row.webhookId, existing);
+  }
+
   return NextResponse.json({
     webhooks: all.map((webhook) => ({
       ...webhook,
       tags: tagMap.get(webhook.id) ?? [],
       tagIds: (tagMap.get(webhook.id) ?? []).map((tag) => tag.id),
+      deviceIds: deviceMap.get(webhook.id) ?? [],
     })),
   });
 }
 
 export async function POST(request: Request) {
   const db = getDb();
-  const { name, url, secret, triggers, groupId, personId, isActive, cooldownMinutes, tagIds } = webhookSchema.parse(
+  const { name, url, secret, triggers, groupId, personId, isActive, cooldownMinutes, tagIds, deviceIds, deviceGapSeconds } = webhookSchema.parse(
     await request.json()
   );
   const resolvedGroupId = groupId ?? personId ?? null;
@@ -86,12 +102,19 @@ export async function POST(request: Request) {
     groupId: resolvedGroupId,
     isActive,
     cooldownMinutes,
+    deviceGapSeconds,
   }).returning();
   const result = resultRows[0];
 
   if (tagIds.length > 0 && result) {
     await db.insert(webhookTags)
       .values(tagIds.map((tagId) => ({ webhookId: result.id, tagId })))
+      .onConflictDoNothing();
+  }
+
+  if (deviceIds.length > 0 && result) {
+    await db.insert(webhookDevices)
+      .values(deviceIds.map((deviceId) => ({ webhookId: result.id, deviceId })))
       .onConflictDoNothing();
   }
 
