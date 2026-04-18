@@ -6,12 +6,14 @@ import { createLogger } from "@/lib/logger";
 
 const log = createLogger("webhooks");
 
-export type WebhookEvent = "flagged" | "volume_spike" | "new_device";
+export type WebhookEvent = "flagged" | "volume_spike" | "new_device" | "device_online" | "device_offline";
 
 const EVENT_LABELS: Record<WebhookEvent, string> = {
   flagged: "🚩 Flagged Query",
   volume_spike: "📈 Volume Spike",
   new_device: "🖥️ New Device",
+  device_online: "🟢 Device Online",
+  device_offline: "🔴 Device Offline",
 };
 
 // --- Circuit breaker (per URL) ---
@@ -104,11 +106,18 @@ function formatDiscordPayload(event: WebhookEvent, rawPayload: Record<string, un
   if (rawPayload.localIp) {
     fields.push({ name: "Local IP", value: String(rawPayload.localIp), inline: true });
   }
+  if (rawPayload.offlineDuration != null) {
+    fields.push({ name: "Offline Duration", value: `${rawPayload.offlineDuration} min`, inline: true });
+  }
+  if (rawPayload.offlineSince) {
+    fields.push({ name: "Offline Since", value: String(rawPayload.offlineSince), inline: true });
+  }
 
   // Catch any remaining fields we haven't explicitly handled (excluding hidden ones)
   const handledKeys = new Set([
     "profileName", "groupName", "deviceName", "domain", "rootDomain",
     "flagReason", "volume", "threshold", "model", "localIp",
+    "offlineDuration", "offlineSince",
   ]);
   for (const [key, val] of Object.entries(rawPayload)) {
     if (val == null || DISCORD_HIDE_KEYS.has(key.toLowerCase()) || handledKeys.has(key)) continue;
@@ -130,7 +139,7 @@ function formatDiscordPayload(event: WebhookEvent, rawPayload: Record<string, un
     embeds: [
       {
         title: EVENT_LABELS[event],
-        color: event === "flagged" ? 0xe74c3c : event === "volume_spike" ? 0xf39c12 : 0x3498db,
+        color: event === "flagged" ? 0xe74c3c : event === "volume_spike" ? 0xf39c12 : event === "device_online" ? 0x2ecc71 : event === "device_offline" ? 0x95a5a6 : 0x3498db,
         fields: fields.slice(0, 25),
         timestamp: rawPayload.timestamp as string,
       },
