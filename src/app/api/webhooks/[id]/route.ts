@@ -87,8 +87,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   await db.update(webhooks).set(updates).where(eq(webhooks.id, id));
 
   if (body.tagIds !== undefined) {
-  await db.delete(webhookDevices).where(eq(webhookDevices.webhookId, id));
-  await db.delete(webhookTags).where(eq(webhookTags.webhookId, id));
+    await db.delete(webhookTags).where(eq(webhookTags.webhookId, id));
     if (body.tagIds.length > 0) {
       await db.insert(webhookTags)
         .values(body.tagIds.map((tagId) => ({ webhookId: id, tagId })))
@@ -116,6 +115,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
   }
 
+  await db.delete(webhookDevices).where(eq(webhookDevices.webhookId, id));
   await db.delete(webhookTags).where(eq(webhookTags.webhookId, id));
   await db.delete(webhooks).where(eq(webhooks.id, id));
   return NextResponse.json({ success: true });

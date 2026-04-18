@@ -71,7 +71,7 @@ function isDiscordWebhook(url: string): boolean {
 // --- Discord embed formatting ---
 const DISCORD_HIDE_KEYS = new Set([
   "tags", "trigger", "timestamp", "groupid", "personid",
-  "profileid", "deviceid", "groupid", "profileid",
+  "profileid", "deviceid",
 ]);
 
 function formatDiscordPayload(event: WebhookEvent, rawPayload: Record<string, unknown>): string {
