@@ -229,6 +229,36 @@ async function processLogBatchUnsafe(
   const existingDeviceMap = new Map(existingDevices.map((d) => [d.id, d]));
   const devicePersonMap = new Map(existingDevices.map((d) => [d.id, d.groupId]));
 
+  // Detect device_online events (device reappears after gap)
+  const deviceOnlineEvents: Array<{
+    deviceId: string;
+    deviceName: string;
+    deviceModel: string | null;
+    deviceLocalIp: string | null;
+    oldLastSeenAt: string;
+    gapSeconds: number;
+  }> = [];
+
+  for (const [deviceId, update] of deviceUpdates) {
+    const existing = existingDeviceMap.get(deviceId);
+    if (!existing?.lastSeenAt) continue; // Skip brand-new devices (already triggers new_device)
+
+    const oldMs = new Date(existing.lastSeenAt).getTime();
+    const newMs = new Date(update.lastSeenAt).getTime();
+    const gapSeconds = (newMs - oldMs) / 1000;
+
+    if (gapSeconds < 60) continue; // Minimum gap gate — skip continuously active devices
+
+    deviceOnlineEvents.push({
+      deviceId,
+      deviceName: update.name,
+      deviceModel: update.model,
+      deviceLocalIp: update.localIp,
+      oldLastSeenAt: existing.lastSeenAt,
+      gapSeconds,
+    });
+  }
+
   const newDevices: Array<{
     id: string;
     name: string;
@@ -282,6 +312,14 @@ async function processLogBatchUnsafe(
           lastSeenAt: update.lastSeenAt,
         });
       }
+    }
+
+    // Clear offlineNotifiedAt for devices that came back online
+    if (deviceOnlineEvents.length > 0) {
+      const onlineDeviceIds = deviceOnlineEvents.map((e) => e.deviceId) as [string, ...string[]];
+      await db.update(devices)
+        .set({ offlineNotifiedAt: null, updatedAt: new Date().toISOString() })
+        .where(inArray(devices.id, onlineDeviceIds));
     }
   }
 
@@ -399,6 +437,25 @@ async function processLogBatchUnsafe(
         threshold: volumeSpikeThreshold,
         window: "batch",
       }).catch((err) => log.error({ err, event: "volume_spike" }, "Webhook error"));
+    }
+
+    // Fire device_online webhooks
+    for (const onlineEvent of deviceOnlineEvents) {
+      const groupId = devicePersonMap.get(onlineEvent.deviceId) ?? null;
+      fireWebhooks("device_online", {
+        profileId,
+        profileName,
+        deviceId: onlineEvent.deviceId,
+        deviceName: onlineEvent.deviceName,
+        model: onlineEvent.deviceModel,
+        localIp: onlineEvent.deviceLocalIp,
+        groupId,
+        personId: groupId,
+        groupName: groupId ? groupNameMap.get(groupId) ?? null : null,
+        offlineSince: onlineEvent.oldLastSeenAt,
+        offlineDuration: Math.round(onlineEvent.gapSeconds / 60),
+        gapSeconds: onlineEvent.gapSeconds,
+      }).catch((err) => log.error({ err, event: "device_online" }, "Webhook error"));
     }
   }
 
