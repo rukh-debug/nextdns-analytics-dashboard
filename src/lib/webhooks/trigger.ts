@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { webhookTags, webhooks } from "@/lib/db/schema";
+import { webhookDevices, webhookTags, webhooks } from "@/lib/db/schema";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("webhooks");
@@ -33,6 +33,8 @@ interface WebhookPayload {
   profileName?: string | null;
   groupName?: string | null;
   deviceName?: string | null;
+  deviceId?: string | null;
+  gapSeconds?: number | null;
   tags?: Array<{ id: string; name: string; slug: string }>;
   [key: string]: unknown;
 }
@@ -265,6 +267,18 @@ export async function fireWebhooks(
     existing.push(row.tagId);
     webhookTagMap.set(row.webhookId, existing);
   }
+  const deviceRows = webhookIds.length > 0
+    ? await db
+        .select({ webhookId: webhookDevices.webhookId, deviceId: webhookDevices.deviceId })
+        .from(webhookDevices)
+        .where(inArray(webhookDevices.webhookId, webhookIds as [string, ...string[]]))
+    : [];
+  const webhookDeviceMap = new Map<string, string[]>();
+  for (const row of deviceRows) {
+    const existing = webhookDeviceMap.get(row.webhookId) ?? [];
+    existing.push(row.deviceId);
+    webhookDeviceMap.set(row.webhookId, existing);
+  }
   const rawPayload = {
     trigger: event,
     timestamp: new Date().toISOString(),
@@ -282,8 +296,21 @@ export async function fireWebhooks(
       event !== "flagged" || scopedTagIds.length === 0
         ? true
         : scopedTagIds.some((tagId) => payloadTagIds.includes(tagId));
+    const scopedDeviceIds = webhookDeviceMap.get(webhook.id) ?? [];
+    const matchesDevice =
+      event !== "device_online" && event !== "device_offline"
+        ? true
+        : scopedDeviceIds.length === 0
+          ? true
+          : scopedDeviceIds.includes(payload.deviceId ?? "");
+    const matchesGap =
+      event !== "device_online" && event !== "device_offline"
+        ? true
+        : !webhook.deviceGapSeconds || !payload.gapSeconds
+          ? true
+          : (payload.gapSeconds ?? 0) >= webhook.deviceGapSeconds;
 
-    if (!matchesEvent || !matchesPerson || !matchesTags) {
+    if (!matchesEvent || !matchesPerson || !matchesTags || !matchesDevice || !matchesGap) {
       continue;
     }
 
