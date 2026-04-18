@@ -43,14 +43,22 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.0",
     "@tailwindcss/postcss": "^4",
     "@types/eventsource": "^3.0.0",
     "@types/node": "^20",
     "@types/node-cron": "^3.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
+    "semantic-release": "^25.0.3",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

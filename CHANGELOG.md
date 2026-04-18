@@ -1,6 +1,8 @@
 # Changelog
 
-## 2026-04-16 — CPU Optimization for Log Ingestion
+## Pre-automated entries
+
+### 2026-04-16 — CPU Optimization for Log Ingestion
 
 **SSE Batching** — SSE stream now buffers logs and flushes in batches (2s / 50 logs) instead of processing one-by-one. Profile state updates throttled to 10s intervals.
 

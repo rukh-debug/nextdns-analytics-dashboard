@@ -3,6 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -26,6 +27,7 @@ jobs:
       meta-images: ghcr.io/${{ github.repository }}
       meta-tags: |
         type=ref,event=branch
+        type=ref,event=tag
         type=sha,prefix=
         type=raw,value=latest,enable={{is_default_branch}}
       labels: |
