@@ -58,9 +58,12 @@ export const devices = pgTable("devices", {
     onDelete: "set null",
   }),
   lastSeenAt: text("last_seen_at"),
+  offlineNotifiedAt: text("offline_notified_at"),
   createdAt: timestamp("created_at", { mode: "string" }).default(sql`now()`),
   updatedAt: timestamp("updated_at", { mode: "string" }).default(sql`now()`),
-});
+}, (table) => [
+  index("idx_devices_last_seen_at").on(table.lastSeenAt),
+]);
 
 export const dnsLogs = pgTable(
   "dns_logs",
@@ -206,6 +209,7 @@ export const webhooks = pgTable("webhooks", {
   isActive: boolean("is_active").default(true),
   triggers: jsonb("triggers").notNull(),
   cooldownMinutes: integer("cooldown_minutes").default(5),
+  deviceGapSeconds: integer("device_gap_seconds"),
   groupId: text("group_id").references(() => groups.id),
   lastTriggeredAt: text("last_triggered_at"),
   createdAt: timestamp("created_at", { mode: "string" }).default(sql`now()`),
@@ -228,6 +232,25 @@ export const webhookTags = pgTable(
     uniqueIndex("idx_webhook_tags_unique").on(table.webhookId, table.tagId),
     index("idx_webhook_tags_webhook_id").on(table.webhookId),
     index("idx_webhook_tags_tag_id").on(table.tagId),
+  ]
+);
+
+export const webhookDevices = pgTable(
+  "webhook_devices",
+  {
+    id: serial("id").primaryKey(),
+    webhookId: text("webhook_id")
+      .notNull()
+      .references(() => webhooks.id, { onDelete: "cascade" }),
+    deviceId: text("device_id")
+      .notNull()
+      .references(() => devices.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { mode: "string" }).default(sql`now()`),
+  },
+  (table) => [
+    uniqueIndex("idx_webhook_devices_unique").on(table.webhookId, table.deviceId),
+    index("idx_webhook_devices_webhook_id").on(table.webhookId),
+    index("idx_webhook_devices_device_id").on(table.deviceId),
   ]
 );
 
@@ -285,5 +308,7 @@ export type Webhook = typeof webhooks.$inferSelect;
 export type NewWebhook = typeof webhooks.$inferInsert;
 export type WebhookTag = typeof webhookTags.$inferSelect;
 export type NewWebhookTag = typeof webhookTags.$inferInsert;
+export type WebhookDevice = typeof webhookDevices.$inferSelect;
+export type NewWebhookDevice = typeof webhookDevices.$inferInsert;
 export type AnalyticsSnapshot = typeof analyticsSnapshots.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
