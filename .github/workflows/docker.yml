@@ -3,15 +3,41 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
     branches: [main]
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
 
 permissions:
   contents: read
 
 jobs:
+  get-version:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Download release version artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-version
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
+      - name: Set version output
+        id: version
+        run: |
+          if [ -f release-version.txt ]; then
+            echo "version=v$(cat release-version.txt)" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: [get-version]
+    if: always() && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
     uses: docker/github-builder/.github/workflows/build.yml@v1
     permissions:
       contents: read
@@ -19,7 +45,7 @@ jobs:
       packages: write
     with:
       output: image
-      push: ${{ github.event_name == 'push' }}
+      push: ${{ github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
       platforms: linux/amd64,linux/arm64
       cache: true
       cache-mode: max
@@ -27,9 +53,9 @@ jobs:
       meta-images: ghcr.io/${{ github.repository }}
       meta-tags: |
         type=ref,event=branch
-        type=ref,event=tag
         type=sha,prefix=
         type=raw,value=latest,enable={{is_default_branch}}
+        type=raw,value=${{ needs.get-version.outputs.version }},enable=${{ needs.get-version.outputs.version != '' }}
       labels: |
         org.opencontainers.image.title=NDNS Analytics Dashboard
         org.opencontainers.image.description=Self-hosted DNS monitoring for NextDNS
