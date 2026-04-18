@@ -6,6 +6,7 @@ import { LogPoller } from "./log-poller";
 import { SSEStreamer } from "./sse-streamer";
 import { AnalyticsScheduler } from "./analytics-scheduler";
 import { RetentionCleanup } from "./retention-cleanup";
+import { DeviceOfflineChecker } from "./device-offline-checker";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("ingestion");
@@ -19,11 +20,13 @@ export class IngestionManager {
   private streamers = new Map<string, SSEStreamer>();
   private analyticsScheduler: AnalyticsScheduler;
   private retentionCleanup: RetentionCleanup;
+  private offlineChecker: DeviceOfflineChecker;
   private started = false;
 
   constructor() {
     this.analyticsScheduler = new AnalyticsScheduler();
     this.retentionCleanup = new RetentionCleanup();
+    this.offlineChecker = new DeviceOfflineChecker();
   }
 
   async start() {
@@ -46,6 +49,7 @@ export class IngestionManager {
 
     this.analyticsScheduler.start();
     this.retentionCleanup.start();
+    this.offlineChecker.start();
 
     log.info({ profileCount: allProfiles.length }, "Manager started");
   }
@@ -55,6 +59,7 @@ export class IngestionManager {
     for (const streamer of this.streamers.values()) streamer.stop();
     this.analyticsScheduler.stop();
     this.retentionCleanup.stop();
+    this.offlineChecker.stop();
     this.started = false;
     log.info("Manager stopped");
   }
