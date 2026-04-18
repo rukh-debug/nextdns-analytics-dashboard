@@ -11,6 +11,7 @@ const DEFAULTS: Record<string, string> = {
   idle_threshold_minutes: "10",
   polling_interval_seconds: "30",
   volume_spike_threshold: "200",
+  device_offline_check_interval_seconds: "300",
 };
 
 export async function seed() {
