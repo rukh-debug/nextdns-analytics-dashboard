@@ -1,7 +1,7 @@
 services:
   app:
     image: ghcr.io/rukh-debug/nextdns-analytics-dashboard:latest
-    container_name: ndns-analytic
+    container_name: ndns-analytics
     restart: unless-stopped
     ports:
       - "3000:3000"
