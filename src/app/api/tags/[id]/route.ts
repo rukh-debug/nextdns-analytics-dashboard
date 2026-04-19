@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { rebuildAllLogTags } from "@/lib/alerts/tagging";
 import { deleteTag, updateTag } from "@/lib/alerts/domain-lists";
 import { z } from "zod";
 import { createLogger } from "@/lib/logger";
@@ -17,8 +18,17 @@ export async function PATCH(
   try {
     const { id } = await params;
     const input = patchTagSchema.parse(await request.json());
-    const tag = await updateTag(id, input);
-    return NextResponse.json({ tag });
+    const tag = await updateTag(id, input, { rebuildLogs: false });
+
+    after(async () => {
+      try {
+        await rebuildAllLogTags();
+      } catch (error) {
+        log.error({ err: error, tagId: id }, "Deferred tag rebuild failed");
+      }
+    });
+
+    return NextResponse.json({ tag, syncQueued: true });
   } catch (error) {
     log.error({ err: error }, "PATCH error");
     return NextResponse.json(

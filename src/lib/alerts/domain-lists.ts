@@ -163,7 +163,8 @@ export async function createTag(input: { name: string; color?: string | null }) 
 
 export async function updateTag(
   tagId: string,
-  input: { name?: string; color?: string | null }
+  input: { name?: string; color?: string | null },
+  options?: { rebuildLogs?: boolean }
 ) {
   const db = getDb();
   const protectedTag = await db
@@ -206,7 +207,9 @@ export async function updateTag(
   }
 
   await db.update(tags).set(updates).where(eq(tags.id, tagId));
-  await rebuildAllLogTags();
+  if (options?.rebuildLogs ?? true) {
+    await rebuildAllLogTags();
+  }
 
   const updatedRows = await db.select().from(tags).where(eq(tags.id, tagId));
   return updatedRows[0] ?? null;
@@ -295,6 +298,10 @@ export async function updateDomainList(
     tagId?: string;
     sourceUrl?: string;
     isActive?: boolean;
+  },
+  options?: {
+    rebuildLogs?: boolean;
+    refreshSource?: boolean;
   }
 ) {
   const db = getDb();
@@ -336,10 +343,10 @@ export async function updateDomainList(
 
   await db.update(domainLists).set(updates).where(eq(domainLists.id, listId));
 
-  const shouldRefresh = input.sourceUrl !== undefined;
+  const shouldRefresh = input.sourceUrl !== undefined && (options?.refreshSource ?? true);
   if (shouldRefresh) {
     await refreshDomainList(listId);
-  } else {
+  } else if (options?.rebuildLogs ?? true) {
     await rebuildAllLogTags();
   }
 

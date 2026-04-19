@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { domainLists, tags } from "@/lib/db/schema";
-import { createDomainList, ensureBuiltInDomainLists } from "@/lib/alerts/domain-lists";
+import {
+  createDomainList,
+  ensureBuiltInDomainLists,
+  refreshDomainList,
+} from "@/lib/alerts/domain-lists";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api:domain-lists");
@@ -71,8 +75,17 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const input = createDomainListSchema.parse(await request.json());
-    const list = await createDomainList(input);
-    return NextResponse.json({ list });
+    const list = await createDomainList({ ...input, refreshOnCreate: false });
+
+    after(async () => {
+      try {
+        await refreshDomainList(list.id);
+      } catch (error) {
+        log.error({ err: error, listId: list.id }, "Deferred domain list refresh failed");
+      }
+    });
+
+    return NextResponse.json({ list, syncQueued: true });
   } catch (error) {
     log.error({ err: error }, "POST error");
     return NextResponse.json(

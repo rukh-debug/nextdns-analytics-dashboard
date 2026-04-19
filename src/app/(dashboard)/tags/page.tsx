@@ -356,9 +356,14 @@ export default function TagsPage() {
       }
 
       setTagDialogOpen(false);
-      await loadConfig();
-      await loadActivity();
-      toast.success(editingTag ? "Tag updated" : "Tag created");
+      await Promise.allSettled([loadConfig(), loadActivity()]);
+      toast.success(
+        editingTag && data.syncQueued
+          ? "Tag updated. Activity summaries are syncing in the background."
+          : editingTag
+            ? "Tag updated"
+            : "Tag created"
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save tag");
     } finally {
@@ -422,9 +427,16 @@ export default function TagsPage() {
       }
 
       setListDialogOpen(false);
-      await loadConfig();
-      await loadActivity();
-      toast.success(editingList ? "Domain list updated" : "Domain list created");
+      await Promise.allSettled([loadConfig(), loadActivity()]);
+      toast.success(
+        data.syncQueued
+          ? editingList
+            ? "Domain list updated. Retagging is continuing in the background."
+            : "Domain list created. Download and retagging are continuing in the background."
+          : editingList
+            ? "Domain list updated"
+            : "Domain list created"
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save domain list");
     } finally {

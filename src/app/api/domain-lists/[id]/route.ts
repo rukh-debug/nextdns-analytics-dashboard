@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
-import { deleteDomainList, updateDomainList } from "@/lib/alerts/domain-lists";
+import { deleteDomainList, refreshDomainList, updateDomainList } from "@/lib/alerts/domain-lists";
+import { rebuildAllLogTags } from "@/lib/alerts/tagging";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api:domain-lists");
@@ -19,8 +20,29 @@ export async function PATCH(
   try {
     const { id } = await params;
     const input = patchDomainListSchema.parse(await request.json());
-    const list = await updateDomainList(id, input);
-    return NextResponse.json({ list });
+    const shouldRefresh = input.sourceUrl !== undefined;
+    const shouldRebuild = !shouldRefresh && (input.tagId !== undefined || input.isActive !== undefined);
+    const list = await updateDomainList(id, input, {
+      rebuildLogs: false,
+      refreshSource: false,
+    });
+
+    if (shouldRefresh || shouldRebuild) {
+      after(async () => {
+        try {
+          if (shouldRefresh) {
+            await refreshDomainList(id);
+            return;
+          }
+
+          await rebuildAllLogTags();
+        } catch (error) {
+          log.error({ err: error, listId: id }, "Deferred domain list sync failed");
+        }
+      });
+    }
+
+    return NextResponse.json({ list, syncQueued: shouldRefresh || shouldRebuild });
   } catch (error) {
     log.error({ err: error }, "PATCH error");
     return NextResponse.json(
