@@ -82,6 +82,7 @@ export const useDashboardStore = create<DashboardState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         activeProfileId: state.activeProfileId,
+        selectedGroupId: state.selectedGroupId,
         sidebarCollapsed: state.sidebarCollapsed,
       }),
     }
