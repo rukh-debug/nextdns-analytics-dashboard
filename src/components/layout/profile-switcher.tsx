@@ -17,7 +17,7 @@ interface Profile {
 }
 
 export function ProfileSwitcher() {
-  const { activeProfileId, setActiveProfile } = useDashboardStore();
+  const { activeProfileId, hasHydrated, setActiveProfile } = useDashboardStore();
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
   useEffect(() => {
@@ -27,6 +27,10 @@ export function ProfileSwitcher() {
         .then((data) => {
           const nextProfiles = data.profiles || [];
           setProfiles(nextProfiles);
+
+          if (!hasHydrated) {
+            return;
+          }
 
           if (nextProfiles.length === 0) {
             setActiveProfile(null);
@@ -47,7 +51,7 @@ export function ProfileSwitcher() {
     loadProfiles();
     window.addEventListener("profiles:updated", loadProfiles);
     return () => window.removeEventListener("profiles:updated", loadProfiles);
-  }, [activeProfileId, setActiveProfile]);
+  }, [activeProfileId, hasHydrated, setActiveProfile]);
 
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
 

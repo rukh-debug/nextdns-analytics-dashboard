@@ -470,8 +470,8 @@ export default function GroupsPage() {
       return;
     }
 
-    if (!selectedGroupId || !groups.some((group) => group.id === selectedGroupId)) {
-      setSelectedGroup(groups[0].id);
+    if (selectedGroupId && !groups.some((group) => group.id === selectedGroupId)) {
+      setSelectedGroup(null);
     }
   }, [groups, selectedGroupId, setSelectedGroup]);
 

@@ -24,7 +24,7 @@ interface Profile {
 }
 
 export default function ProfilesPage() {
-  const { activeProfileId, setActiveProfile } = useDashboardStore();
+  const { activeProfileId, hasHydrated, setActiveProfile } = useDashboardStore();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [discovering, setDiscovering] = useState(false);
   const [discoverFeedback, setDiscoverFeedback] = useState<string | null>(null);
@@ -41,6 +41,10 @@ export default function ProfilesPage() {
     const data = await res.json();
     const next = data.profiles || [];
     setProfiles(next);
+    if (!hasHydrated) {
+      return next as Profile[];
+    }
+
     if (activeProfileId && !next.some((p: Profile) => p.id === activeProfileId)) {
       setActiveProfile(next[0]?.id ?? null);
     }
@@ -51,7 +55,7 @@ export default function ProfilesPage() {
   useEffect(() => {
     refreshProfiles().catch(() => toast.error("Failed to load profiles"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasHydrated]);
 
   const discoverProfiles = async () => {
     setDiscovering(true);
