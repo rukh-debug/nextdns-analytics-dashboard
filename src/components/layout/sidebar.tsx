@@ -28,15 +28,17 @@ const navItems = [
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  authEnabled: boolean;
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, authEnabled }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
+    router.replace(authEnabled ? "/login" : "/");
+    router.refresh();
   }
 
   return (
@@ -89,22 +91,23 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="px-2 pb-1 shrink-0">
-        <button
-          onClick={handleLogout}
-          aria-label="Sign out"
-          title={collapsed ? "Sign out" : undefined}
-          className={cn(
-            "flex items-center rounded-lg text-sm font-medium transition-all duration-150 w-full",
-            collapsed ? "h-9 w-9 mx-auto justify-center" : "gap-3 px-3 py-2",
-            "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          )}
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Sign out</span>}
-        </button>
-      </div>
+      {authEnabled && (
+        <div className="px-2 pb-1 shrink-0">
+          <button
+            onClick={handleLogout}
+            aria-label="Sign out"
+            title={collapsed ? "Sign out" : undefined}
+            className={cn(
+              "flex items-center rounded-lg text-sm font-medium transition-all duration-150 w-full",
+              collapsed ? "h-9 w-9 mx-auto justify-center" : "gap-3 px-3 py-2",
+              "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            )}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Sign out</span>}
+          </button>
+        </div>
+      )}
 
       {/* Toggle */}
       <div className="p-2 border-t shrink-0">
