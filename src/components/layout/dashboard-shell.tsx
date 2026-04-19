@@ -40,6 +40,7 @@ export function DashboardShell({ children, authEnabled }: DashboardShellProps) {
       defaultTheme="dark"
       enableSystem
       disableTransitionOnChange
+      storageKey="ndns-theme"
     >
       <Sidebar
         collapsed={sidebarCollapsed}

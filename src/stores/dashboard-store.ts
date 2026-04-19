@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 export interface Group {
   id: string;
@@ -24,6 +24,8 @@ export interface Device {
   isActive?: boolean;
   lastSeen?: string | null;
 }
+
+const DASHBOARD_STORAGE_KEY = "ndns-dashboard-store";
 
 interface DashboardState {
   activeProfileId: string | null;
@@ -76,9 +78,11 @@ export const useDashboardStore = create<DashboardState>()(
 
     }),
     {
-      name: "ndns-dashboard-store",
+      name: DASHBOARD_STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         activeProfileId: state.activeProfileId,
+        sidebarCollapsed: state.sidebarCollapsed,
       }),
     }
   )
